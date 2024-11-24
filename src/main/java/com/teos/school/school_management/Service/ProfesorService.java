@@ -4,7 +4,6 @@ package com.teos.school.school_management.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.teos.school.school_management.Model.Alumno;
 import com.teos.school.school_management.Model.Profesor;
 import com.teos.school.school_management.Repository.ProfesorRepository;
 

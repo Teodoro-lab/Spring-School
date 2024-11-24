@@ -14,6 +14,7 @@ import java.util.stream.StreamSupport;
 @Service
 public class AlumnoService {
 
+    @Autowired
     private AlumnoRepository alumnoRepository;
 
     public List<Alumno> findAll() {
@@ -32,5 +33,9 @@ public class AlumnoService {
 
     public void deleteById(Integer id) {
         alumnoRepository.deleteById(id);
+    }
+
+    public Boolean existsById(Integer id) {
+        return alumnoRepository.existsById(id);
     }
 }

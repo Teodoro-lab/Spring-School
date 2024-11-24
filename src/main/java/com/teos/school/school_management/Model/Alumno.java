@@ -28,6 +28,11 @@ public class Alumno {
     @DecimalMin(value = "0.0", message = "El promedio no puede ser negativo")
     private Double promedio;
 
+    private String fotoPerfilUrl;  
+
+    @NotBlank(message = "La contraseña no puede estar vacía")
+    private String password;
+
     // Getters and Setters
 
     public Integer getId() {
@@ -68,5 +73,17 @@ public class Alumno {
 
     public void setPromedio(Double promedio) {
         this.promedio = promedio;
+    }
+
+    public String getFotoPerfilUrl() {
+        return fotoPerfilUrl;
+    }
+
+    public void setFotoPerfilUrl(String fotoPerfilUrl) {
+        this.fotoPerfilUrl = fotoPerfilUrl;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

@@ -1,13 +1,10 @@
 package com.teos.school.school_management.Controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.teos.school.school_management.Model.Profesor;
-import com.teos.school.school_management.Service.ProfesorService;
 
 import jakarta.validation.Valid;
 
