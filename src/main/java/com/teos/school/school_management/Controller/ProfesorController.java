@@ -1,33 +1,32 @@
 package com.teos.school.school_management.Controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.teos.school.school_management.Model.Profesor;
+import com.teos.school.school_management.Service.ProfesorService;
 
 import jakarta.validation.Valid;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/profesores")
 public class ProfesorController {
 
-    private ArrayList<Profesor> profesores = new ArrayList<>();
+    @Autowired  
+    private ProfesorService profesorService;
 
     @GetMapping
-    public List<Profesor> getAllProfesores() {
-        return profesores;
+    public Iterable<Profesor> getAllProfesores() {
+        return profesorService.findAll();
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Profesor> getProfesorById(@PathVariable Integer id) {
-        Optional<Profesor> prof = profesores.stream()
-            .filter(profesor -> profesor.getId().equals(id))
-            .findFirst();
+        Optional<Profesor> prof = profesorService.findById(id);
 
         if (prof.isPresent()) {
             return new ResponseEntity<>(prof.get(), HttpStatus.OK);
@@ -38,15 +37,13 @@ public class ProfesorController {
 
     @PostMapping
     public ResponseEntity<Profesor> createProfesor(@Valid @RequestBody Profesor profesor) {
-        profesores.add(profesor);
-        return new ResponseEntity<>(profesor, HttpStatus.CREATED);
+        Profesor savedProfesor = profesorService.save(profesor);
+        return new ResponseEntity<>(savedProfesor, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Profesor> updateProfesor(@PathVariable Integer id, @Valid @RequestBody Profesor profesor) {
-        Optional<Profesor> profesorFromDb = profesores.stream()
-            .filter(prof -> prof.getId().equals(id))
-            .findFirst();
+        Optional<Profesor> profesorFromDb = profesorService.findById(id);
 
         if (profesorFromDb.isPresent()) {
             Profesor existingProfesor = profesorFromDb.get();
@@ -54,7 +51,9 @@ public class ProfesorController {
             existingProfesor.setNombres(profesor.getNombres());
             existingProfesor.setApellidos(profesor.getApellidos());
             existingProfesor.setHorasClase(profesor.getHorasClase());
-            return new ResponseEntity<>(existingProfesor, HttpStatus.OK);
+
+            Profesor updatedProfesor = profesorService.save(existingProfesor);
+            return new ResponseEntity<>(updatedProfesor, HttpStatus.OK);
         }  
 
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -62,7 +61,8 @@ public class ProfesorController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProfesor(@PathVariable Integer id) {
-        if (profesores.removeIf(profesor -> profesor.getId().equals(id))){
+        if (profesorService.existsById(id)) {
+            profesorService.deleteById(id);
             return new ResponseEntity<>(HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);

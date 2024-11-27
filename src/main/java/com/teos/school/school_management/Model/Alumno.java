@@ -86,4 +86,8 @@ public class Alumno {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public Boolean isPasswordCorrect(String password) {
+        return this.password.equals(password);
+    }
 }
