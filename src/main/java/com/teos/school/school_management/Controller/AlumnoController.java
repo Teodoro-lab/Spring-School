@@ -9,8 +9,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.teos.school.school_management.Model.Alumno;
 import com.teos.school.school_management.Model.SesionesAlumnos;
 import com.teos.school.school_management.Service.AlumnoService;
-import com.teos.school.school_management.Service.SessionsDynamoService;
-import com.teos.school.school_management.Service.UploadObject;
+import com.teos.school.school_management.Service.SessionsService;
+import com.teos.school.school_management.Service.StudentInfoEmailService;
+import com.teos.school.school_management.Service.TokenGenerator;
+import com.teos.school.school_management.Service.ProfilePicsService;
 
 import jakarta.validation.Valid;
 
@@ -32,14 +34,14 @@ public class AlumnoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Alumno> getAlumnoById(@PathVariable Integer id) {
+    public ResponseEntity<?> getAlumnoById(@PathVariable Integer id) {
         Optional<Alumno> alum = alumnoService.findById(id);
 
         if (alum.isPresent()) {
             return new ResponseEntity<>(alum.get(), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
     }
 
     @PostMapping
@@ -49,11 +51,11 @@ public class AlumnoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Alumno> updateAlumno(@PathVariable Integer id, @Valid @RequestBody Alumno alumno) {
+    public ResponseEntity<?> updateAlumno(@PathVariable Integer id, @Valid @RequestBody Alumno alumno) {
         Optional<Alumno> alumnoFromDb = alumnoService.findById(id);
 
         if (!alumnoFromDb.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
         }
 
         Alumno existingAlumno = alumnoFromDb.get();
@@ -69,30 +71,30 @@ public class AlumnoController {
     public ResponseEntity<?> deleteAlumno(@PathVariable Integer id) {
         if (alumnoService.existsById(id)){
             alumnoService.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(Map.of("message", "Alumno deleted successfully"), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/{id}/fotoPerfil")
-    public ResponseEntity<Alumno> uploadFotoPerfil(@PathVariable Integer id, @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadFotoPerfil(@PathVariable Integer id, @RequestParam("foto") MultipartFile file) {
         Optional<Alumno> alumnoFromDb = alumnoService.findById(id);
     
         if (!alumnoFromDb.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
         }
 
         Alumno existingAlumno = alumnoFromDb.get();
         String fileObjKeyName = "profile-pictures/" + id + "/" + file.getOriginalFilename();
-        String fotoPerfilUrl = UploadObject.uploadProfilePicture(fileObjKeyName, file);
+        String fotoPerfilUrl = ProfilePicsService.uploadProfilePicture(fileObjKeyName, file);
 
         if (fotoPerfilUrl != null) {
             existingAlumno.setFotoPerfilUrl(fotoPerfilUrl);
             Alumno updatedAlumno = alumnoService.save(existingAlumno);
             return new ResponseEntity<>(updatedAlumno, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(Map.of("message", "Error uploading profile picture"), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -102,34 +104,35 @@ public class AlumnoController {
         String password = credentials.get("password");
 
         if (!alumnoFromDb.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
         }
 
         Alumno existingAlumno = alumnoFromDb.get();
 
         if(!existingAlumno.isPasswordCorrect(password)) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
+        TokenGenerator tokenGenerator = new TokenGenerator();
+
         SesionesAlumnos sesion = new SesionesAlumnos();
-        
         sesion.setId(UUID.randomUUID().toString());
         sesion.setAlumnoId(id);
         sesion.setActive(true);
         sesion.setFecha(System.currentTimeMillis());
-        sesion.setSessionString(UUID.randomUUID().toString());
+        sesion.setSessionString(tokenGenerator.generateToken());
 
-        SessionsDynamoService.createRecord(sesion);
+        SessionsService.createRecord(sesion);
         return new ResponseEntity<>(sesion, HttpStatus.OK);
     }
 
     @PostMapping("{id}/session/logout")
     public ResponseEntity<?> logout(@PathVariable Integer id, @RequestBody Map<String, String> session) {
         String sessionId = session.get("sessionString");
-        Optional<SesionesAlumnos> sessionRecord = SessionsDynamoService.getRecord(sessionId);
+        Optional<SesionesAlumnos> sessionRecord = SessionsService.getRecord(sessionId);
 
         if (!sessionRecord.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Session not found"), HttpStatus.NOT_FOUND);
         }
 
         SesionesAlumnos existingSesion = sessionRecord.get();
@@ -139,34 +142,49 @@ public class AlumnoController {
         }
 
         existingSesion.setActive(false);
-        SessionsDynamoService.updateRecord(existingSesion);
-        return new ResponseEntity<>(HttpStatus.OK);
+        SessionsService.updateRecord(existingSesion);
+        return new ResponseEntity<>(Map.of("message", "Session logged out successfully"), HttpStatus.OK);
     }
 
-    @PostMapping("{id}/session/verify")
+    @PostMapping(value="{id}/session/verify", produces = "application/json")
     public ResponseEntity<?> verifySession(@PathVariable Integer id, @RequestBody Map<String, String> session) {
         String sessionId = session.get("sessionString");
 
         Optional<Alumno> alumnoFromDb = alumnoService.findById(id);
         if (!alumnoFromDb.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
         }
 
-        Optional<SesionesAlumnos> sessionRecord = SessionsDynamoService.getRecord(sessionId);
+        Optional<SesionesAlumnos> sessionRecord = SessionsService.getRecord(sessionId);
         if (!sessionRecord.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Map.of("message", "Invalid session"), HttpStatus.BAD_REQUEST);
         }
 
         SesionesAlumnos existingSesion = sessionRecord.get();
         if (existingSesion.getAlumnoId() != id) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
         // correct case! 
         if (existingSesion.getActive()) {
-            return new ResponseEntity<>(HttpStatus.OK);
+            return new ResponseEntity<>(Map.of("message", "Session is active"), HttpStatus.OK);
         }
 
-        return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        return new ResponseEntity<>(Map.of("message", "Session is not active"), HttpStatus.BAD_REQUEST);
+    }
+
+    @PostMapping("{id}/email")
+    public ResponseEntity<?> sendEmail(@PathVariable Integer id) {
+        Optional<Alumno> alumnoFromDb = alumnoService.findById(id);
+        if (!alumnoFromDb.isPresent()) {
+            return new ResponseEntity<>(Map.of("message", "Alumno not found"), HttpStatus.NOT_FOUND);
+        }
+
+        try {
+            StudentInfoEmailService.sendEmail(alumnoFromDb.get().toEmailString());
+            return new ResponseEntity<>(Map.of("message", "Email sent successfully"), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Map.of("message", "Error sending email " + e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

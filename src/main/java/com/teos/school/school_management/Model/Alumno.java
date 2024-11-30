@@ -90,4 +90,10 @@ public class Alumno {
     public Boolean isPasswordCorrect(String password) {
         return this.password.equals(password);
     }
+
+    public String toEmailString() {
+        return "Alumno: " + nombres + " " + apellidos + "\n" +
+            "Matrícula: " + matricula + "\n" +
+            "Promedio: " + promedio + "\n";
+    }
 }

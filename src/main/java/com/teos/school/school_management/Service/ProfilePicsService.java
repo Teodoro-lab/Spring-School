@@ -14,7 +14,7 @@ import java.io.InputStream;
 
 import org.springframework.web.multipart.MultipartFile;
 
-public class UploadObject {
+public class ProfilePicsService {
 
     public static String uploadProfilePicture(String fileObjKeyName, MultipartFile file) {
         Regions clientRegion = Regions.US_EAST_1;

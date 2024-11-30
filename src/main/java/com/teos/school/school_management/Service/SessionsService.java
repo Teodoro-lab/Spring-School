@@ -1,6 +1,7 @@
 package com.teos.school.school_management.Service;
 
 import java.util.Optional;
+import java.util.List;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
@@ -14,8 +15,8 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 
-public class SessionsDynamoService {
-    private static final String REGION = "";
+public class SessionsService {
+    private static final String REGION = "us-east-1";
     private static final String ACCESS_KEY = "";
     private static final String SECRET_KEY = "";
     private static final String SESSION_TOKEN = "";
@@ -45,7 +46,6 @@ public class SessionsDynamoService {
 
     public static Optional<SesionesAlumnos> getRecord(String session) {
         try {
-
             AmazonDynamoDB client = createDynamoDBClient();
             DynamoDBMapper mapper = new DynamoDBMapper(client);
 
@@ -57,7 +57,12 @@ public class SessionsDynamoService {
                     .withAttributeValueList(new AttributeValue().withS(session))
             );
 
-            return Optional.ofNullable(mapper.scan(SesionesAlumnos.class, scanExpression).get(0));
+            List<SesionesAlumnos> result = mapper.scan(SesionesAlumnos.class, scanExpression);
+            if (result.isEmpty()) {
+                return Optional.empty();
+            }
+
+            return Optional.of(result.get(0));
         } catch (ResourceNotFoundException e) {
             System.err.println("Be sure that it exists and that you've typed its name correctly!");
             System.exit(1);
@@ -65,7 +70,7 @@ public class SessionsDynamoService {
             System.err.println(e.getMessage());
             System.exit(1);
         }
-                
+
         return Optional.empty();
     }
 
