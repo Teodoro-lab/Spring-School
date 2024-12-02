@@ -137,7 +137,7 @@ public class AlumnoController {
 
         SesionesAlumnos existingSesion = sessionRecord.get();
 
-        if (existingSesion.getAlumnoId() != id) {
+        if (!Integer.valueOf(existingSesion.getAlumnoId()).equals(id)) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
 
@@ -161,7 +161,7 @@ public class AlumnoController {
         }
 
         SesionesAlumnos existingSesion = sessionRecord.get();
-        if (existingSesion.getAlumnoId() != id) {
+        if (!Integer.valueOf(existingSesion.getAlumnoId()).equals(id)) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 
